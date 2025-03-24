@@ -53,3 +53,16 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
 - **Scalability**: Refactor the system to reliably support **large volumes of PDF files** without performance degradation.
 - **Multi-language Support**: Enable semantic search and QA for documents in non-English languages.
 
+
+
+## Result Examples
+
+  #### uploaded file: WHO report for covid-19
+  ![summarize](https://github.com/user-attachments/assets/88d99be1-c5ed-4c4c-8263-417491c950b6)
+  ![summarize_answer](https://github.com/user-attachments/assets/abd64730-aa4b-42d3-9476-af1e5cf81ce8)
+
+
+  #### uploaded file: Attention Is All You Need (* the paper that introduced the Transformer, showing that attention alone can replace RNNs for tasks like language translation.)
+
+  ![원리질문](https://github.com/user-attachments/assets/2050e14b-2190-4731-a2a0-7407a6ce787b)
+  ![논문단순질문과 대답](https://github.com/user-attachments/assets/ec15ffce-ce1b-4f9c-aae0-c84733e96f4d)
