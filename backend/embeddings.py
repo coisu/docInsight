@@ -3,19 +3,21 @@ import faiss
 import numpy as np
 import os
 import pickle
+from pdf_processing import process_uploaded_pdfs
+
 
 MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
 INDEX_PATH = "data/embeddings/index.faiss"
 METADATA_PATH = "data/embeddings/metadata.pkl"
 
-# Load or initialize model
+# Load model
 model = SentenceTransformer(MODEL_NAME)
 
 def create_index():
-    return faiss.IndexFlatL2(768)  # Dim for all-mpnet-base-v2
+    return faiss.IndexFlatL2(768)
 
 def save_index(index, metadata):
-    os.makedirs(os.path.dirname("data/embeddings/"), exist_ok=True)
+    os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
     faiss.write_index(index, INDEX_PATH)
     with open(METADATA_PATH, "wb") as f:
         pickle.dump(metadata, f)
@@ -40,22 +42,34 @@ def embed_and_store(text_data):
         metadata.extend([{"filename": item["filename"], "chunk": chunk} for chunk in chunks])
     save_index(index, metadata)
 
-def search(query, top_k=3):
+def search(query, top_k=10):
     index, metadata = load_index()
     query_vec = model.encode([query])
     D, I = index.search(np.array(query_vec), top_k)
     return [metadata[i] for i in I[0] if i < len(metadata)]
 
-def split_text(text, max_len=512):
-    """Simple splitter by sentence length. Can be enhanced."""
-    sentences = text.split(". ")
-    chunks, chunk = [], ""
-    for sentence in sentences:
-        if len(chunk) + len(sentence) < max_len:
-            chunk += sentence + ". "
+def split_text(text, max_len=500, min_len=200):
+    lines = text.split("\n")
+    chunks = []
+    current_chunk = ""
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        if len(current_chunk) + len(line) < max_len:
+            current_chunk += line + "\n"
         else:
-            chunks.append(chunk.strip())
-            chunk = sentence + ". "
-    if chunk:
-        chunks.append(chunk.strip())
+            if len(current_chunk.strip()) >= min_len:
+                chunks.append(current_chunk.strip())
+            current_chunk = line + "\n"
+
+    if len(current_chunk.strip()) >= min_len:
+        chunks.append(current_chunk.strip())
+
     return chunks
+
+def store_embedding_for_pdf(pdf_path: str):
+    text_data = process_uploaded_pdfs(os.path.dirname(pdf_path))
+    embed_and_store(text_data)

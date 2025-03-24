@@ -4,7 +4,7 @@ uvicorn
 pymupdf  # PDF text extraction
 sentence-transformers  # Semantic search embeddings
 faiss-cpu  # Vector search index
-openai  # LLM integration
+openai>=1.0.0  # LLM integration
 tqdm  # Progress tracking
 python-dotenv  # Environment variable management
 python-multipart # UploadFile, File, Form in FastAPI

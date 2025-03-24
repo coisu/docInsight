@@ -3,7 +3,6 @@ import os
 from typing import List
 
 def extract_text_from_pdf(pdf_path: str) -> str:
-    """Extracts text from a given PDF file."""
     try:
         doc = fitz.open(pdf_path)
         text = "\n".join([page.get_text("text") for page in doc])
@@ -13,7 +12,6 @@ def extract_text_from_pdf(pdf_path: str) -> str:
         return ""
 
 def process_uploaded_pdfs(pdf_dir: str) -> List[dict]:
-    """Processes all PDFs in the specified directory and extracts text."""
     extracted_data = []
     for pdf_file in os.listdir(pdf_dir):
         if pdf_file.endswith(".pdf"):

@@ -9,8 +9,8 @@ services:
     volumes:
       - ./backend:/app
       - ./data:/data
-    environment:
-      - ENV=production
+    env_file:
+      - .env
 
   frontend:
     build: ./frontend
@@ -20,3 +20,5 @@ services:
       - ./frontend:/app
     depends_on:
       - backend
+    env_file:
+      - .env
