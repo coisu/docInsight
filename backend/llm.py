@@ -8,7 +8,8 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 def is_summary_query(query: str) -> bool:
     query = query.lower().strip()
     return any(q in query for q in [
-        "summarize", "summarize this report", "summarize the whole document", "briefly describe"
+        "summarize", "summarize this report", "summarize the whole document", "briefly describe", "give me a summary", "analyze the paper",
+        "what is this paper about", "short summary", "shorten the text", "analyze this"
     ])
 
 def build_prompt(query: str, contexts: list, max_chars: int = 6000) -> str:
@@ -21,8 +22,31 @@ def build_prompt(query: str, contexts: list, max_chars: int = 6000) -> str:
 
     if is_summary_query(query):
         prompt = f"""
-You are a professional document summarizer.
-Summarize the document clearly and concisely. Use structured sections if applicable.
+You are an expert document summarizer.
+
+Summarize the content clearly and concisely, suitable for someone who has not read the document. 
+If applicable, include the following:
+
+- The main purpose and scope of the document
+- Key findings or insights
+- Important methods, arguments, or processes
+- Implications, conclusions, or future directions
+
+Try to organize the summary into the following structure if appropriate:
+
+Title:
+...
+
+Summary:
+...
+
+Highlights:
+- ...
+- ...
+- ...
+
+Conclusion:
+...
 
 Document:
 {context_text}

@@ -48,6 +48,19 @@ def search(query, top_k=10):
     D, I = index.search(np.array(query_vec), top_k)
     return [metadata[i] for i in I[0] if i < len(metadata)]
 
+def search_with_keywords(query, metadata, top_k=10):
+    model = SentenceTransformer(MODEL_NAME)
+    query_vec = model.encode([query])
+    index = create_index()
+    chunks = []
+    for item in metadata:
+        embedding = model.encode([item["chunk"]])
+        index.add(np.array(embedding))
+        chunks.append(item)
+    
+    D, I = index.search(np.array(query_vec), top_k)
+    return [chunks[i] for i in I[0] if i < len(chunks)]
+
 def split_text(text, max_len=500, min_len=200):
     lines = text.split("\n")
     chunks = []
