@@ -60,6 +60,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
 @app.post("/query/")
 def query_documents(query: str = Form(...), files: List[str] = Form(...)):
     try:
+        print("\n\n📂 Currently selected files for query:", files)
         index, metadata = load_index()
         filtered_metadata = [item for item in metadata if item["filename"] in files]
 
@@ -68,6 +69,7 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
         else:
             keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
             vector_results = search(query, top_k=5)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함함
+            vector_results = [item for item in vector_results if item["filename"] in files]
             contexts = keyword_chunks + vector_results
 
         answer = generate_answer(query, contexts)
