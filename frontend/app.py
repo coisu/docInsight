@@ -78,7 +78,8 @@ if query and selected_files:
             st.markdown("### 📄 Sources")
             for i, src in enumerate(result["sources"], 1):
                 st.markdown(f"**{i}. {src['filename']}**")
-                st.code(src["chunk"], language="markdown")
+                if "chunk" in src:
+                    st.code(src["chunk"], language="markdown")
         else:
             st.error(f"Error: {res.text}")
 else:
