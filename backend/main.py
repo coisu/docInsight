@@ -5,7 +5,7 @@ import os
 
 from pdf_processing import process_uploaded_pdfs
 from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords
-from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison
+from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt
 
 app = FastAPI()
 
@@ -65,7 +65,25 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
         filtered_metadata = [item for item in metadata if item["filename"] in files]
 
         if is_summary_query(query):
-            contexts = get_contexts_for_summary(filtered_metadata)
+            contexts_files = {file: [] for file in files}
+            for item in filtered_metadata:
+                contexts_files[item["filename"]].append(item)
+
+            summaries_files = {}
+            for file, contexts in contexts_files.items():
+                single = build_single_summary_prompt("summarize this document", contexts[:10])
+                summary = generate_answer_for_summary(single)
+                summaries_files[file] = summary
+            
+            prompt_summary = build_joint_summary_prompt(query, summaries_files)
+            summarized_answer = generate_answer_for_summary(prompt_summary)
+            
+            return {
+                "query": query,
+                "answer": summarized_answer,
+                "sources": [{"filename": file, "chunk": summaries_files[file]} for file in summaries_files]
+            }
+            # contexts = get_contexts_for_summary(filtered_metadata)
         elif is_comparison_query(query):
             contexts_files = {file: [] for file in files}
             for item in filtered_metadata:
