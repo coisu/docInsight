@@ -49,7 +49,6 @@ def search(query, top_k=10):
     return [metadata[i] for i in I[0] if i < len(metadata)]
 
 def search_with_keywords(query, metadata, top_k=10):
-    model = SentenceTransformer(MODEL_NAME)
     query_vec = model.encode([query])
     index = create_index()
     chunks = []
