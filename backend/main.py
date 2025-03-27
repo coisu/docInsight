@@ -64,9 +64,8 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
         index, metadata = load_index()
         filtered_metadata = [item for item in metadata if item["filename"] in files]
 
-        query_type = {}
-        if is_summary_query(query):
-            query_type = "summary"  
+        query_type = classify_query_sementic(query)
+        if query_type == "summary":
             contexts_files = {file: [] for file in files}
             for item in filtered_metadata:
                 contexts_files[item["filename"]].append(item)
@@ -86,9 +85,7 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
                 "sources": [{"filename": file, "chunk": summaries_files[file]} for file in summaries_files]
             }
             # contexts = get_contexts_for_summary(filtered_metadata)
-        elif is_comparison_query(query):
-            query_type = "comparison"
-
+        elif query_type == "comparison":
             contexts_files = {file: [] for file in files}
             for item in filtered_metadata:
                 contexts_files[item["filename"]].append(item)
@@ -106,10 +103,8 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
                 "sources": [{"filename": file, "chunk": summaries_files[file]} for file in summaries_files]
             }
         else:
-            query_type = "normal"
-
             keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
-            vector_results = search(query, top_k=5)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함함
+            vector_results = search(query, top_k=5)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함
             vector_results = [item for item in vector_results if item["filename"] in files]
             contexts = keyword_chunks + vector_results
 
