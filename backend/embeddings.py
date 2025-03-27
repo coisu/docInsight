@@ -1,4 +1,4 @@
-from sentence_transformers import SentenceTransformer
+from sentence_transformers import SentenceTransformer, util
 import faiss
 import numpy as np
 import os
@@ -85,3 +85,61 @@ def split_text(text, max_len=500, min_len=200):
 def store_embedding_for_pdf(pdf_path: str):
     text_data = process_uploaded_pdfs(os.path.dirname(pdf_path))
     embed_and_store(text_data)
+
+
+
+EXAMPLES = {
+    "summary": [
+        "summarize",
+        "summarize this report",
+        "summarize the whole document",
+        "briefly describe the paper",
+        "give me a summary",
+        "analyze the paper",
+        "what is this paper about",
+        "what are these documents about",
+        "give an overview of the documents",
+        "provide a short summary",
+        "shorten the text",
+        "analyze this",
+        "what do they discuss",
+        "high-level overview",
+    ],
+    "comparison": [
+        "compare",
+        "compare the documents",
+        "contrast the models",
+        "what are the differences",
+        "what are the similarities",
+        "compare and contrast the methods",
+        "difference between the papers",
+        "how are these different",
+        "how are they similar",
+        "compare with each other",
+        "contrast this with that",
+        "different from",
+        "similar to",
+        "distinguish between these",
+        "highlight differences",
+    ]
+}
+
+
+
+def classify_query_sementic(query: str, threshold: float = 0.6) -> str:
+    query_embedding = model.encode(query, convert_to_tensor=True)
+    type = "normal"
+    score = 0
+
+    for key, examples in EXAMPLES.items():
+        example_embeddings = model.encode(examples, convert_to_tensor=True)
+        scores = util.pytorch_cos_sim(query_embedding, example_embeddings)
+        max_score = scores.max().item() # this way is better for PyTorch tensors
+        # max_score = max(scores.flatten())
+        print(f"max_score: {max_score}")
+
+        if max_score > threshold and max_score > score:
+            score = max_score
+            type = key
+
+    return type

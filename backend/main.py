@@ -4,7 +4,7 @@ import shutil
 import os
 
 from pdf_processing import process_uploaded_pdfs
-from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords
+from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords, classify_query_sementic
 from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt
 
 app = FastAPI()
