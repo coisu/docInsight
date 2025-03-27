@@ -69,18 +69,33 @@ if query and selected_files:
     with st.spinner("Searching and generating answer..."):
         # res = requests.post(f"{backend_url}/query/", data={"query": query}, files={"files": selected_files})
         data = [("query", query)] + [("files", f) for f in selected_files]
-        res = requests.post(f"{backend_url}/query/", data=data)
-        if res.status_code == 200:
-            result = res.json()
+        response = requests.post(f"{backend_url}/query/", data=data)
+        if response.status_code == 200:
+            result = response.json()
+            query_type = result.get("query_type", "normal")
             st.markdown("### ✅ Answer")
             st.write(result["answer"])
 
             st.markdown("### 📄 Sources")
             for i, src in enumerate(result["sources"], 1):
                 st.markdown(f"**{i}. {src['filename']}**")
-                if "chunk" in src:
+                if query_type == "summary":
+                    st.markdown("#### Summary")
                     st.code(src["chunk"], language="markdown")
+                    with st.expander("Show original source from documents"):
+                        st.code(get_original_text(src["filename"]))
+
+                elif query_type == "comparison":
+                    if "chunk" in src:
+                        st.markdown("#### Comparison")
+                        st.code(src["chunk"], language="markdown")
+                
+                else:
+                    if "chunk" in src:
+                        st.markdown("#### Context")
+                        st.code(src["chunk"], language="markdown")
+
         else:
-            st.error(f"Error: {res.text}")
+            st.error(f"Error: {response.text}")
 else:
     st.warning("Type a question and select documents to search.")
