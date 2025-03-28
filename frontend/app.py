@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 import time
+import logging
 
 st.set_page_config(page_title="docInsight", layout="wide")
 st.title("📚 docInsight")
@@ -75,20 +76,30 @@ if query and selected_files:
             query_type = result.get("query_type", "normal")
             st.markdown("### ✅ Answer")
             st.write(result["answer"])
-
+            st.text(f">> Query type: {query_type}")
+            # print(f"\n\n>>  Query type: {query_type}\n\n")
             st.markdown("### 📄 Sources")
             for i, src in enumerate(result["sources"], 1):
                 st.markdown(f"**{i}. {src['filename']}**")
                 if query_type == "summary":
                     st.markdown("#### Summary")
                     st.code(src["chunk"], language="markdown")
-                    with st.expander("Show original source from documents"):
-                        st.code(get_original_text(src["filename"]))
+                    
+                    if "original_chunks" in src:
+                        with st.expander("Show original source from documents"):
+                            for j, chunk in enumerate(src["original_chunks"], 1):
+                                st.markdown(f"**{j}.**")
+                                st.code(chunk, language="markdown")
 
                 elif query_type == "comparison":
                     if "chunk" in src:
                         st.markdown("#### Comparison")
                         st.code(src["chunk"], language="markdown")
+                    if "original_chunks" in src:
+                        with st.expander("Show original source from documents"):
+                            for j, chunk in enumerate(src["original_chunks"], 1):
+                                st.markdown(f"**{j}.**")
+                                st.code(chunk, language="markdown")
                 
                 else:
                     if "chunk" in src:

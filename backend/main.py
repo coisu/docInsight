@@ -65,6 +65,7 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
         filtered_metadata = [item for item in metadata if item["filename"] in files]
 
         query_type = classify_query_sementic(query)
+        print("🔍 Query type:", query_type)
         if query_type == "summary":
             contexts_files = {file: [] for file in files}
             for item in filtered_metadata:
@@ -82,7 +83,13 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             return {
                 "query": query,
                 "answer": summarized_answer,
-                "sources": [{"filename": file, "chunk": summaries_files[file]} for file in summaries_files]
+                "sources": [
+                    {
+                        "filename": file, "chunk": summaries_files[file],
+                        "original_chunks": [c["chunk"] for c in contexts_files[file]]
+                    } for file in summaries_files
+                ],
+                "query_type": query_type
             }
             # contexts = get_contexts_for_summary(filtered_metadata)
         elif query_type == "comparison":
@@ -100,7 +107,13 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             return {
                 "query": query,
                 "answer": compared_answer,
-                "sources": [{"filename": file, "chunk": summaries_files[file]} for file in summaries_files]
+                "sources": [
+                    {
+                        "filename": file, "chunk": summaries_files[file],
+                        "original_chunks": [c["chunk"] for c in contexts_files[file]]
+                    } for file in summaries_files
+                ],
+                "query_type": query_type
             }
         else:
             keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
