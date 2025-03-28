@@ -62,6 +62,15 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
   Allow users to manually select which uploaded PDF files to include in a query.  
   → Fully implemented at both frontend and backend levels.
 
+- [ ] 🚧 **Smarter Context Selection**
+  improving how document chunks are selected for answering user questions,
+  - [x] Paragraph-based chunking instead of line-based splitting to preserve semantic structure.
+  - [x] Deduplication and diversity filtering to avoid repetitive or overly similar chunks.
+  - [x] Head–Tail inclusion to ensure important introduction and conclusion sections are always considered.
+  - [ ] Document-type detection to apply different chunking strategies for academic papers, reports, manuals, and general texts.
+  - [ ] Fallback to summarization for queries that implicitly require information spread across multiple sections.
+  - [ ] Section-aware Chunking for Academic Documents
+
 - [ ] 🚧 **Prompt Engineering & Context Selection Optimization**  
   Improve retrieval precision and summarization quality by:  
   - controlling prompt length  
