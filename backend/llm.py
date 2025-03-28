@@ -120,6 +120,8 @@ Context:
 
 Answer:
 """
+    
+    print(f"\n\nPrompt: {prompt}\n\n")
     return prompt.strip()
 
 def generate_answer_for_summary(prompt: str) -> str:

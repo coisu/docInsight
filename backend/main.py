@@ -37,6 +37,33 @@ def get_keyword_chunks(query: str, metadata: list, max_matches=3):
             break
     return matches
 
+def deduplicate_chunks(chunks):
+    seen = set()
+    unique = []
+    for item in chunks:
+        key = item['chunk'].strip()
+        if key not in seen:
+            seen.add(key)
+            unique.append(item)
+    return unique
+
+def diverse_top_chunks(chunks, k=8):
+    selected = []
+    seen_words = set()
+    for chunk in chunks:
+        words = set(chunk["chunk"].lower().split())
+        if len(seen_words.intersection(words)) < 0.4 * len(words):  # 40% 이상 겹치면 유사한 내용으로 판단
+            selected.append(chunk)
+            seen_words.update(words)
+        if len(selected) >= k:
+            break
+    return selected
+
+def get_head_tail_chunks(metadata, max_chunks=4):
+    head = metadata[:max_chunks // 2]
+    tail = metadata[-max_chunks // 2:]
+    return deduplicate_chunks(head + tail)
+
 @app.get("/")
 def root():
     return {"message": "Semantic Search + LLM API is running!"}
@@ -116,10 +143,15 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
                 "query_type": query_type
             }
         else:
+            head_tail = get_head_tail_chunks(filtered_metadata, max_chunks=4)
+
             keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
-            vector_results = search(query, top_k=5)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함
+            vector_results = search(query, top_k=12)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함
             vector_results = [item for item in vector_results if item["filename"] in files]
-            contexts = keyword_chunks + vector_results
+            
+            raw_chunks = head_tail + keyword_chunks + vector_results
+            filtered_chunks = deduplicate_chunks(raw_chunks)
+            contexts = diverse_top_chunks(filtered_chunks, k=8)
 
         answer = generate_answer(query, contexts)
         return {

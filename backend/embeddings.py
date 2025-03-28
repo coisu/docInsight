@@ -60,8 +60,11 @@ def search_with_keywords(query, metadata, top_k=10):
     D, I = index.search(np.array(query_vec), top_k)
     return [chunks[i] for i in I[0] if i < len(chunks)]
 
-def split_text(text, max_len=500, min_len=200):
-    lines = text.split("\n")
+import re
+
+def split_text(text, max_len=800, min_len=200):
+    lines = re.split(r'\n{2,}', text)
+    # lines = text.split("\n")
     chunks = []
     current_chunk = ""
 
