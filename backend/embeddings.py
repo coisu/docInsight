@@ -36,10 +36,17 @@ def embed_and_store(text_data):
         text = item["text"]
         if not text.strip():
             continue
-        chunks = split_text(text)
+        
+        doc_type = guess_document_type(text)
+        print(f"\n\n>> Document type: {doc_type}\n\n")
+        if doc_type == "academic":
+            chunks = split_text_by_sections(text)
+        else:
+            chunks = split_text(text)
+
         embeddings = model.encode(chunks)
         index.add(np.array(embeddings))
-        metadata.extend([{"filename": item["filename"], "chunk": chunk} for chunk in chunks])
+        metadata.extend([{"filename": item["filename"], "chunk": chunk, "doc_type": doc_type} for chunk in chunks])
     save_index(index, metadata)
 
 def search(query, top_k=10):
@@ -85,11 +92,42 @@ def split_text(text, max_len=800, min_len=200):
 
     return chunks
 
+def split_text_by_sections(text, max_len=800, min_len=200):
+    section_pattern = re.compile(r'\b\d+(\.\d+)*\s+[^\n]+')  # e.g., "4.2 Next Sentence Prediction"
+    matches = list(section_pattern.finditer(text))
+
+    chunks = []
+    for i, match in enumerate(matches):
+        start = match.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        section_text = text[start:end].strip()
+
+        sub_chunks = split_text(section_text, max_len=max_len, min_len=min_len)
+        chunks.extend(sub_chunks)
+
+    return chunks
+
 def store_embedding_for_pdf(pdf_path: str):
     text_data = process_uploaded_pdfs(os.path.dirname(pdf_path))
     embed_and_store(text_data)
 
+def guess_document_type(text: str) -> str:
+    text_lower = text.lower()
 
+    academic_keywords = ["introduction", "experiment", "conclusion", "related work", "results", "evaluation", "dataset"]
+    report_keywords = ["executive summary", "table of contents", "methodology", "findings", "objective", "recommendations"]
+    manual_keywords = ["step 1", "usage:", "how to", "install", "instruction", "follow these steps"]
+    legal_keywords = ["agreement", "terms and conditions", "clause", "party", "shall", "warranty", "liability", "indemnify"]
+
+    if re.search(r'\b\d+(\.\d+)*\s+[A-Z]', text) and any(kw in text_lower for kw in academic_keywords):
+        return "academic"
+    if any(kw in text_lower for kw in report_keywords):
+        return "report"
+    if any(kw in text_lower for kw in manual_keywords):
+        return "manual"
+    if any(kw in text_lower for kw in legal_keywords):
+        return "legal"
+    return "general"
 
 EXAMPLES = {
     "summary": [

@@ -92,6 +92,7 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
         filtered_metadata = [item for item in metadata if item["filename"] in files]
 
         query_type = classify_query_sementic(query)
+        
         print("🔍 Query type:", query_type)
         if query_type == "summary":
             contexts_files = {file: [] for file in files}
@@ -143,6 +144,9 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
                 "query_type": query_type
             }
         else:
+            doc_types = {item.get("doc_type", "unknown") for item in filtered_metadata}
+            is_academic = "academic" in doc_types
+
             head_tail = get_head_tail_chunks(filtered_metadata, max_chunks=4)
 
             keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
@@ -153,6 +157,16 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             filtered_chunks = deduplicate_chunks(raw_chunks)
             contexts = diverse_top_chunks(filtered_chunks, k=8)
 
+            if is_academic:
+                prompt_summary = build_single_summary_prompt(query, filtered_metadata[:10])
+                summarized_answer = generate_answer_for_summary(prompt_summary)
+                return {
+                    "query": query,
+                    "answer": summarized_answer,
+                    "sources": filtered_metadata[:8],
+                    "query_type": query_type
+                }
+            
         answer = generate_answer(query, contexts)
         return {
             "query": query,
