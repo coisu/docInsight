@@ -129,7 +129,10 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             
             summaries_files = {}
             for file, contexts in contexts_files.items():
-                summary = generate_answer("summarize this document", contexts[:10])
+                # summary = generate_answer("summarize this document", contexts[:10])
+                # summaries_files[file] = summary
+                single = build_single_summary_prompt("summarize this document", contexts[:10])
+                summary = generate_answer_for_summary(single)
                 summaries_files[file] = summary
 
             prompt_comparison = build_comparison_prompt(query, summaries_files)

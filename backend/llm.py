@@ -236,8 +236,24 @@ def generate_answer_for_comparison(prompt: str) -> str:
         print(f"LLM generation error: {e}")
         return "An error occurred while generating the answer."
 
-def generate_answer(query: str, contexts: list) -> str:
-    prompt = build_prompt(query, contexts)
+# def generate_answer(query: str, contexts: list) -> str:
+#     prompt = build_prompt(query, contexts)
+#     try:
+#         response = client.chat.completions.create(
+#             model="gpt-4",
+#             messages=[
+#                 {"role": "system", "content": "You are a helpful assistant."},
+#                 {"role": "user", "content": prompt}
+#             ],
+#             max_tokens=1024,
+#             temperature=0.7
+#         )
+#         return response.choices[0].message.content.strip()
+#     except Exception as e:
+#         print(f"LLM generation error: {e}")
+#         return "An error occurred while generating the answer."
+
+def generate_answer(prompt: str) -> str:
     try:
         response = client.chat.completions.create(
             model="gpt-4",
