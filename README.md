@@ -36,6 +36,7 @@ cd docInsight
 
 ### 2️⃣ Run the Docker Containers
 > The `.env` file is encrypted using GDG, and you'll need the decryption password to load environment variables.
+> You would need your own OPENAI_API_KEY setting
 
 ```bash
 make build
