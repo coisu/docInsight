@@ -18,6 +18,85 @@ def is_comparison_query(query: str) -> bool:
         "compare", "contrast", "difference", "differences", "similarities", "similar to", "different from", "compare and contrast", "compare with", "difference between"
     ])
 
+def build_prompt_by_doc_type(query: str, contexts: list, doc_type: str, max_chars: int = 6000) -> str:
+    context_text = ""
+    for c in contexts:
+        chunk = c["chunk"]
+        if len(context_text) + len(chunk) > max_chars:
+            break
+        context_text += chunk + "\n---\n"
+    
+    if doc_type == "academic":
+        return f"""
+You are an expert academic assistant.
+Answer the following question based on the document content. If appkicable, refer to research goals, methods, results, and conclusions.
+
+Question:
+{query}
+
+Academic Document:
+{context_text}
+
+Answer:
+
+""".strip()
+    
+    elif doc_type == "report":
+        return f"""
+You are an expert report assistant.
+Answer the following question based on the document content.  Try to consider the document's purpose, key findings, and strategic recommendations.
+
+Question:
+{query}
+
+Report Document:
+{context_text}
+
+Answer:
+""".strip()
+
+    elif doc_type == "manual":
+        return f"""
+You are an expert technical manual assistant.
+Provide a clear, step-by-step answer or explanation based on the manual content.
+
+Question:
+{query}
+
+Manual Document:
+{context_text}
+
+Answer:
+""".strip()
+
+    elif doc_type == "legal":
+        return f"""
+You are an expert legal assistant.
+Answer the following question based on the document content. identify and explain relevant clauses, responsibilities, obligations, or rights.
+
+Question:
+{query}
+
+Legal Document:
+{context_text}
+
+Answer:
+""".strip()
+    
+    else:
+        return f"""
+You are an expert document assistant.
+Answer the following question based on the document content.
+
+Question:
+{query}
+
+Context:
+{context_text}
+
+Answer:
+""".strip()
+
 def build_single_summary_prompt(query: str, contexts: list, max_chars: int = 6000) -> str:
     context_text = ""
     for c in contexts:

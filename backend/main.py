@@ -5,7 +5,7 @@ import os
 
 from pdf_processing import process_uploaded_pdfs
 from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords, classify_query_sementic
-from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt
+from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt, build_prompt_by_doc_type
 
 app = FastAPI()
 
@@ -94,6 +94,7 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
         query_type = classify_query_sementic(query)
         
         print("🔍 Query type:", query_type)
+
         if query_type == "summary":
             contexts_files = {file: [] for file in files}
             for item in filtered_metadata:
@@ -119,6 +120,7 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
                 ],
                 "query_type": query_type
             }
+        
             # contexts = get_contexts_for_summary(filtered_metadata)
         elif query_type == "comparison":
             contexts_files = {file: [] for file in files}
@@ -143,12 +145,14 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
                 ],
                 "query_type": query_type
             }
+        
         else:
-            doc_types = {item.get("doc_type", "unknown") for item in filtered_metadata}
-            is_academic = "academic" in doc_types
+            from collections import Counter
+
+            doc_type_counter = Counter([item.get("doc_type", "unknown") for item in filtered_metadata])
+            dominant_doc_type = doc_type_counter.most_common(1)[0][0]
 
             head_tail = get_head_tail_chunks(filtered_metadata, max_chunks=4)
-
             keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
             vector_results = search(query, top_k=12)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함
             vector_results = [item for item in vector_results if item["filename"] in files]
@@ -157,23 +161,18 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             filtered_chunks = deduplicate_chunks(raw_chunks)
             contexts = diverse_top_chunks(filtered_chunks, k=8)
 
-            if is_academic:
-                prompt_summary = build_single_summary_prompt(query, filtered_metadata[:10])
-                summarized_answer = generate_answer_for_summary(prompt_summary)
-                return {
-                    "query": query,
-                    "answer": summarized_answer,
-                    "sources": filtered_metadata[:8],
-                    "query_type": query_type
-                }
-            
-        answer = generate_answer(query, contexts)
-        return {
-            "query": query,
-            "answer": answer,
-            "sources": contexts[:5],
-            "query_type": query_type
-        }
+            # if is_academic:
+            #     prompt_summary = build_single_summary_prompt(query, filtered_metadata[:10])
+            #     summarized_answer = generate_answer_for_summary(prompt_summary)
+            prompt = build_prompt_by_doc_type(query, contexts, dominant_doc_type)
+            answer = generate_answer(prompt)
+
+            return {
+                "query": query,
+                "answer": answer,
+                "sources": filtered_metadata[:8],
+                "query_type": query_type
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
