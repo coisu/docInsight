@@ -68,9 +68,10 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
   - [x] Paragraph-based chunking instead of line-based splitting to preserve semantic structure.
   - [x] Deduplication and diversity filtering to avoid repetitive or overly similar chunks.
   - [x] Head–Tail inclusion to ensure important introduction and conclusion sections are always considered.
-  - [ ] Document-type detection to apply different chunking strategies for academic papers, reports, manuals, and general texts.
+  - [x] Document-type detection to apply different chunking strategies for academic papers, reports, manuals, and general texts.
   - [ ] Fallback to summarization for queries that implicitly require information spread across multiple sections.
   - [ ] Section-aware Chunking for Academic Documents
+  - [ ] 🚧 re-ranking chuks after getting them by FAISS. vetor search is not accurate enough for some questions. apply cosine similarity caculation on it.
 
 - [ ] 🚧 **Prompt Engineering & Context Selection Optimization**  
   Improve retrieval precision and summarization quality by:  
