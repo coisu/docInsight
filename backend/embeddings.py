@@ -13,6 +13,14 @@ METADATA_PATH = "data/embeddings/metadata.pkl"
 # Load model
 model = SentenceTransformer(MODEL_NAME)
 
+# FAISS is Approximate Nearest Neighbor (ANN) search library.
+# It is vector search library, it is fast. but not the most accurate.
+# semantic re-ranking is needed for better accuracy.
+# cosine similarity is used for semantic search.
+# FAISS supports inner product and L2 distance.
+# To use cosine similarity with FAISS, normalize all vectors and use inner product.
+
+
 def create_index():
     return faiss.IndexFlatL2(768)
 
@@ -136,14 +144,11 @@ EXAMPLES = {
         "summarize the whole document",
         "briefly describe the paper",
         "give me a summary",
-        "analyze the paper",
         "what is this paper about",
         "what are these documents about",
         "give an overview of the documents",
         "provide a short summary",
-        "shorten the text",
-        "analyze this",
-        "what do they discuss",
+        "shorten the entire text",
         "high-level overview",
     ],
     "comparison": [
@@ -162,9 +167,17 @@ EXAMPLES = {
         "similar to",
         "distinguish between these",
         "highlight differences",
-    ]
+    ],
+    "normal": [
+    "what is the purpose of this document",            # could be taken as summary
+    "what are the key findings",                      
+    "what future work do the authors suggest",
+    "what recommendations are made",
+    "what conclusions are drawn",
+    "what are the main ideas discussed",
+    "what are the limitations mentioned",
+]
 }
-
 
 
 def classify_query_sementic(query: str, threshold: float = 0.6) -> str:

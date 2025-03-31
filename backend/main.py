@@ -7,6 +7,13 @@ from pdf_processing import process_uploaded_pdfs
 from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords, classify_query_sementic
 from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt, build_prompt_by_doc_type
 
+import re
+
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+
+
 app = FastAPI()
 
 UPLOAD_DIR = "data/pdfs"
@@ -26,8 +33,15 @@ def get_contexts_for_summary(metadata: list, max_chunks: int = 30):
     tail = metadata[-max_chunks // 2:]
     return head + tail
 
-def get_keyword_chunks(query: str, metadata: list, max_matches=3):
-    keywords = query.lower().split()
+def get_keyword_chunks(query: str, metadata: list, max_matches=5):
+    stop_words = set(stopwords.words('english'))
+
+    keywords = [word for word in re.findall(r'\w+', query.lower()) if word not in stop_words]
+
+
+
+    # keywords = query.lower().split()
+    print("🔍 Keywords for search:", keywords)
     matches = []
     for item in metadata:
         content = item["chunk"].lower()
@@ -156,14 +170,17 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             dominant_doc_type = doc_type_counter.most_common(1)[0][0]
 
             head_tail = get_head_tail_chunks(filtered_metadata, max_chunks=4)
-            keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=3)
+            keyword_chunks = get_keyword_chunks(query, filtered_metadata, max_matches=5)
             vector_results = search(query, top_k=12)  # FAISS 벡터 검색을 없앤 경우 정확도가 확연히 떨어짐을 확인함
             vector_results = [item for item in vector_results if item["filename"] in files]
             
             raw_chunks = head_tail + keyword_chunks + vector_results
             filtered_chunks = deduplicate_chunks(raw_chunks)
             contexts = diverse_top_chunks(filtered_chunks, k=8)
-
+            
+            print("\n📌 Selected final context chunks passed to LLM:")
+            for i, ctx in enumerate(contexts):
+                print(f"\n--- Context {i+1} ---\n{ctx['chunk'][:1000]}")
             # if is_academic:
             #     prompt_summary = build_single_summary_prompt(query, filtered_metadata[:10])
             #     summarized_answer = generate_answer_for_summary(prompt_summary)

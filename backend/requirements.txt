@@ -8,3 +8,4 @@ openai>=1.0.0  # LLM integration
 tqdm  # Progress tracking
 python-dotenv  # Environment variable management
 python-multipart # UploadFile, File, Form in FastAPI
+nltk
