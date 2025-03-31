@@ -13,13 +13,18 @@ METADATA_PATH = "data/embeddings/metadata.pkl"
 # Load model
 model = SentenceTransformer(MODEL_NAME)
 
-# FAISS is Approximate Nearest Neighbor (ANN) search library.
+# FAISS is Approximate Nearest Neighbor (ANN) search library. 벡터 중 쿼리와 유사한 벡터값 찾기.근사값기준으로 top_k 청크 추출.
 # It is vector search library, it is fast. but not the most accurate.
-# semantic re-ranking is needed for better accuracy.
+# semantic re-ranking is needed for better accuracy. FAISS가 가져온 top_k 청크를 다시 정렬하는 것.query_embedding과 각각의 chunk_embedding 사이의 cosine similarity 재계산.가장 의미적으로 가까운 순서로 정렬 
 # cosine similarity is used for semantic search.
 # FAISS supports inner product and L2 distance.
 # To use cosine similarity with FAISS, normalize all vectors and use inner product.
 
+# total docs contents (vector embedding)
+# numerous embedded vectors (FAISS)
+# Top 30 chunks (semantic search) -> re-ranking (cosine similarity)
+# -> top 8 chunks (final answer)
+# -> generate final answer (LLM)
 
 def create_index():
     return faiss.IndexFlatL2(768)
