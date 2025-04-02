@@ -4,9 +4,9 @@ import shutil
 import os
 
 from pdf_processing import process_uploaded_pdfs
-from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords, classify_query_sementic
-from llm import generate_answer, is_summary_query, is_comparison_query, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt, build_prompt_by_doc_type
-
+from embeddings import embed_and_store, search, load_index, store_embedding_for_pdf, search_with_keywords  
+from llm import generate_answer, build_comparison_prompt, generate_answer_for_comparison, build_joint_summary_prompt, generate_answer_for_summary, build_single_summary_prompt, build_prompt_by_doc_type, rerank_by_semantic_similarity, classify_query_sementic
+from collections import Counter
 import re
 
 import nltk
@@ -36,10 +36,8 @@ def get_contexts_for_summary(metadata: list, max_chunks: int = 30):
 def get_keyword_chunks(query: str, metadata: list, max_matches=5):
     stop_words = set(stopwords.words('english'))
 
-    keywords = [word for word in re.findall(r'\w+', query.lower()) if word not in stop_words]
-
-
-
+    # keywords = [word for word in re.findall(r'\w+', query.lower()) if word not in stop_words]
+    keywords = [word for word in query.lower().split() if word not in stop_words and len(word) > 2]
     # keywords = query.lower().split()
     print("🔍 Keywords for search:", keywords)
     matches = []
@@ -61,22 +59,23 @@ def deduplicate_chunks(chunks):
             unique.append(item)
     return unique
 
-def diverse_top_chunks(chunks, k=8):
-    selected = []
-    seen_words = set()
-    for chunk in chunks:
-        words = set(chunk["chunk"].lower().split())
-        if len(seen_words.intersection(words)) < 0.4 * len(words):  # 40% 이상 겹치면 유사한 내용으로 판단
-            selected.append(chunk)
-            seen_words.update(words)
-        if len(selected) >= k:
-            break
-    return selected
-
 def get_head_tail_chunks(metadata, max_chunks=4):
     head = metadata[:max_chunks // 2]
     tail = metadata[-max_chunks // 2:]
     return deduplicate_chunks(head + tail)
+
+# def diverse_top_chunks(chunks, k=8):
+#     selected = []
+#     seen_words = set()
+#     for chunk in chunks:
+#         words = set(chunk["chunk"].lower().split())
+#         if len(seen_words.intersection(words)) < 0.4 * len(words):  # 40% 이상 겹치면 유사한 내용으로 판단
+#             selected.append(chunk)
+#             seen_words.update(words)
+#         if len(selected) >= k:
+#             break
+#     return selected
+
 
 @app.get("/")
 def root():
@@ -164,8 +163,6 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             }
         
         else:
-            from collections import Counter
-
             doc_type_counter = Counter([item.get("doc_type", "unknown") for item in filtered_metadata])
             dominant_doc_type = doc_type_counter.most_common(1)[0][0]
 
@@ -176,11 +173,13 @@ def query_documents(query: str = Form(...), files: List[str] = Form(...)):
             
             raw_chunks = head_tail + keyword_chunks + vector_results
             filtered_chunks = deduplicate_chunks(raw_chunks)
-            contexts = diverse_top_chunks(filtered_chunks, k=8)
+            # contexts = diverse_top_chunks(filtered_chunks, k=8)
             
+            contexts = rerank_by_semantic_similarity(query, filtered_chunks, top_k=8)
+
             print("\n📌 Selected final context chunks passed to LLM:")
             for i, ctx in enumerate(contexts):
-                print(f"\n--- Context {i+1} ---\n{ctx['chunk'][:1000]}")
+                print(f"\n--- Context {i+1} ---\n{ctx['chunk']}\n")
             # if is_academic:
             #     prompt_summary = build_single_summary_prompt(query, filtered_metadata[:10])
             #     summarized_answer = generate_answer_for_summary(prompt_summary)
