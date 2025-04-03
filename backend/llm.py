@@ -3,8 +3,9 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from typing import List, Dict
 from sentence_transformers import util
-from langchain.prompts import PromptTemplate
+# from langchain.prompts import PromptTemplate
 import re
+from models import model
 
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -24,12 +25,17 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def build_prompt_by_doc_type(query: str, contexts: list, doc_type: str, max_chars: int = 6000) -> str:
     context_text = ""
+    included_chunks = []
     for c in contexts:
         chunk = c["chunk"]
         if len(context_text) + len(chunk) > max_chars:
             break
         context_text += chunk + "\n---\n"
-    
+        included_chunks.append(chunk)
+
+    print("\n📥 ✅ Final included chunks in prompt (after max_chars limit):")
+    for i, ch in enumerate(included_chunks):
+        print(f"\n--- Included Chunk {i+1} ---\n{ch}\n")
 
 # If the authors explicitly or implicitly mention any limitations, assumptions, constraints, or trade-offs, list them.
 # If no limitations are stated, say: "The authors do not mention any limitations.
@@ -387,7 +393,7 @@ def classify_query_sementic(query: str, threshold: float = 0.6) -> str:
     return type
 
 def split_text(text, max_len=800, min_len=200):
-    lines = re.split(r'\n{2,}', text)
+    lines = re.split(r'\n+', text)
     # lines = text.split("\n")
     chunks = []
     current_chunk = ""
@@ -410,7 +416,19 @@ def split_text(text, max_len=800, min_len=200):
     return chunks
 
 def split_text_by_sections(text, max_len=800, min_len=200):
-    section_pattern = re.compile(r'\b\d+(\.\d+)*\s+[^\n]+')  # e.g., "4.2 Next Sentence Prediction"
+    # section_pattern = re.compile(r'\b\d+(\.\d+)*\s+[^\n]+')  # e.g., "4.2 Next Sentence Prediction"
+    
+    section_pattern = re.compile(r'''
+        ^                           # 줄 시작
+        (                           
+            (?:\d+(?:\.\d+)*)       # 1, 1.1, 1.1.1
+            |(?:[IVXLCDM]+)         # Roman numerals (I, II, III,)
+        )
+        [\.\)\:\s]*                 # separator (dot, colon, space)
+        [A-Z][^\n]{3,80}            # Uppercase, max 80 chars
+        $
+    ''', re.MULTILINE | re.VERBOSE)
+
     matches = list(section_pattern.finditer(text))
 
     chunks = []
@@ -423,3 +441,27 @@ def split_text_by_sections(text, max_len=800, min_len=200):
         chunks.extend(sub_chunks)
 
     return chunks
+
+import nltk
+nltk.download('stopwords')
+from nltk.corpus import stopwords
+
+stop_words = set(stopwords.words('english'))
+
+def extract_keywords(query):
+    return [word for word in query.lower().split() if word not in stop_words and len(word) > 2]
+
+def semantic_filter_chunks(query, chunks, top_k=12):
+    keywords = extract_keywords(query)
+    print("🔍 Keywords for search:", keywords)
+    keyword_embedding = model.encode(' '.join(keywords), convert_to_tensor=True)
+
+    scored_chunks = []
+    for chunk in chunks:
+        chunk_embedding = model.encode(chunk["chunk"], convert_to_tensor=True)
+        score = util.pytorch_cos_sim(keyword_embedding, chunk_embedding).item()
+        scored_chunks.append((score, chunk))
+
+    scored_chunks.sort(reverse=True, key=lambda x: x[0])
+
+    return [chunk for score, chunk in scored_chunks[:top_k]]
