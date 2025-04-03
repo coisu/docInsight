@@ -63,15 +63,14 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
   Allow users to manually select which uploaded PDF files to include in a query.  
   → Fully implemented at both frontend and backend levels.
 
-- [ ] 🚧 **Smarter Context Selection**
+- [x]  **Smarter Context Selection**
   improving how document chunks are selected for answering user questions,
   - [x] Paragraph-based chunking instead of line-based splitting to preserve semantic structure.
   - [x] Deduplication and diversity filtering to avoid repetitive or overly similar chunks.
   - [x] Head–Tail inclusion to ensure important introduction and conclusion sections are always considered.
   - [x] Document-type detection to apply different chunking strategies for academic papers, reports, manuals, and general texts.
-  - [ ] Fallback to summarization for queries that implicitly require information spread across multiple sections.
-  - [ ] Section-aware Chunking for Academic Documents
-  - [ ] 🚧 re-ranking chuks after getting them by FAISS. vetor search is not accurate enough for some questions. apply cosine similarity caculation on it.
+  - [x] Section-aware Chunking for Academic Documents
+  - [x] 🚧 re-ranking chuks after getting them by FAISS. vetor search is not accurate enough for some questions. apply cosine similarity caculation on it.
 
 - [ ] 🚧 **Prompt Engineering & Context Selection Optimization**  
   Improve retrieval precision and summarization quality by:  
@@ -83,7 +82,7 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
   Continue testing complex multi-file questions, especially those requiring reasoning across 2 or 3 specific documents.  
   → Includes indirect, comparison, and hybrid question types for reliability testing.
 
-- [ ] 🚧 **Scalability for Large Document Sets**  
+- [ ]  **Scalability for Large Document Sets**  
   Optimize indexing, chunking, and memory usage to support 50+ PDF documents without performance degradation.  
   → Refactor chunk loading, vector storage, and file filtering pipeline.
 
@@ -93,7 +92,7 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
 - [ ]  **Multi-language Support**  
   Extend semantic search and question answering to non-English documents, starting with Korean and French support.
 
-- [ ]  **Debugging & Explainability Tools**  
+- [x]  **Debugging & Explainability Tools**  
   Add developer-facing tools to log and visualize:  
   - selected chunks and similarity scores  
   - how each chunk contributed to the answer  
@@ -186,3 +185,62 @@ These examples validate that the app:
 - Differentiates between summary and comparison needs
 - Dynamically generates structured responses using multiple documents
 - Provides full traceability to original source content
+
+
+
+---
+
+
+
+## Summary of Improvements - 03042025
+Enhanced Chunking Logic for Academic PDF Documents
+This update significantly improves the chunk generation process to better support academic document Q&A tasks. The following changes were made:
+
+1. Improved Section Header Detection
+  Previous regex only matched numeric section headers (e.g., 4.2 Section Name)
+  New regex supports various academic patterns:
+
+    Arabic numbers: `1`, `2.3`, `3.1.4`
+    Roman numerals: `I.`, `II)`, etc.
+    Keywords like “Section 1: Introduction”
+    Standalone capitalized section titles
+
+2. Refined Line-Based Chunk Splitting
+  Replaced `re.split(r'\n{2,}', text)` with `re.split(r'\n+', text)`
+  Enables chunking even when documents don't contain double line breaks
+
+3. Increased Candidate Chunks for Reranking (`search_unified()`)
+  Increased `top_k` in FAISS search from 20 → 50 to significantly improve relevant chunk recall for long academic documents.
+
+---
+
+### Before vs After: 
+#### Test case1 
+##### Q1. What are the key differences in the training objectives between BERT and RoBERTa?
+
+
+#### A - Before
+  > The document does not provide explicit information on the differences in training objectives between BERT and RoBERTa.
+However, it mentions that **BERT uses two main objectives** for pretraining: **Masked Language Modeling (MLM)** and **Next Sentence Prediction (NSP)**. For MLM, a random sample of tokens in the input sequence is selected and replaced with a special token [MASK], and the objective is to predict these masked tokens. For NSP, the objective is to predict whether two segments follow each other in the original text. However, **the document does not provide specific information on the training objectives of RoBERTa.**
+  
+#### A - After
+  > The key differences in the training objectives between BERT and RoBERTa are primarily related to **data processing and optimization techniques.**
+BERT uses two objectives during pretraining: masked language modeling and next sentence prediction. It masks a random sample of input tokens and uses a cross-entropy loss function to predict the masked tokens. BERT also trains on two segments of token sequences, presented as a single input sequence with special tokens delimiting them.
+  >
+  > On the other hand, RoBERTa's training objectives focus on **longer training times, larger batches**, and **more data**. It also **removes the next sentence prediction objective used by BERT**, trains on **longer sequences**, and **dynamically changes the masking pattern** applied to the training data. RoBERTa is also trained with a **batch size eight times larger** for half as many optimization steps, thus seeing four times as many sequences in pretraining compared to BERT. Also, unlike BERT, RoBERTa's training procedure does **not involve multi-task finetuning** or additional data for certain tasks.
+
+---
+
+#### Test case2
+##### Q2. Compare the experimental results of BERT and RoBERTa on GLUE and SQuAD benchmarks.
+
+#### A - Before
+  > The academic document **does not provide specific experimental results** for BERT and RoBERTa on GLUE and SQuAD benchmarks. However, it is mentioned that the **RoBERTa model, when trained for 500K steps, outperforms XLNetLARGE** across most tasks. It is also stated that the **best RoBERTa model achieves state-of-the-art results** on GLUE, RACE and SQuAD. For BERT, it is mentioned that it was **significantly undertrained** and can **match or exceed the performance** of every model published after it. **Further detail or comparison of the results is not provided.**
+
+#### A - After
+  > The academic document **does not provide explicit numerical comparisons** between the BERT and RoBERTa models on the GLUE and SQuAD benchmarks. However, it mentions that the **improved training procedure of RoBERTa improves upon the published BERT results** on both GLUE and SQuAD. When RoBERTa was trained for longer over additional data, it **achieved a score of 88.5 on the public GLUE leaderboard**, matching the **88.4 reported by Yang et al. (2019)**. The RoBERTa model also established a **new state-of-the-art on 4/9 of the GLUE tasks**. Despite these improvements, explicit **numerical comparison between BERT and RoBERTa's performance** on the GLUE and SQuAD benchmarks **is not provided** in the document.
+
+
+
+
+
