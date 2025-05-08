@@ -10,14 +10,14 @@ This project is designed to enable **semantic search across multiple PDF documen
 - Develop a **browser-accessible web interface** for seamless user interaction.
 - Utilize **Docker for containerized deployment** to ensure easy setup and execution.
 
-## 🚀 Features
+## Features
 
 - **Semantic Search**: Retrieves the most relevant chunks from uploaded PDFs using embedding-based similarity.
 - **LLM Integration**: Summarizes and constructs coherent answers based on the selected chunks.
 - **Multi-file Support**: Capable of handling multiple PDF files uploaded via browser interface.
 - **Browser-based Interface**: Built for accessibility and convenience directly from the web.
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - Python
 - Docker & Docker Compose
@@ -27,14 +27,14 @@ This project is designed to enable **semantic search across multiple PDF documen
 
 
 
-## 🚀 Development & Execution
-### 1️⃣ Clone the Repository
+## Development & Execution
+### Clone the Repository
 ```bash
 git clone https://github.com/coisu/docInsight.git
 cd docInsight
 ```
 
-### 2️⃣ Run the Docker Containers
+### Run the Docker Containers
 > The `.env` file is encrypted using GDG, and you'll need the decryption password to load environment variables.
 > You would need your own OPENAI_API_KEY setting
 
@@ -43,13 +43,13 @@ make build
 make run
 ```
 
-### 3️⃣ Access the Web Interface
+### Access the Web Interface
 ```
 http://localhost:8501  (Streamlit UI)
 http://localhost:8000/docs  (FastAPI Swagger UI)
 ```
 
-## 📌 Planned Improvements
+## Planned Improvements
 
 - [x]  **Semantic Query Classification**  
   Classify incoming queries as `summary`, `comparison`, or `normal` using sentence embeddings and cosine similarity.  
@@ -101,7 +101,7 @@ http://localhost:8000/docs  (FastAPI Swagger UI)
 
 -------------------
 
-### 📌 Result Generator Development
+### Result Generator Development
 
 > Currently supporting multi-document queries with dynamic answer generation based on query type.  
 > The query type is determined using `classify_query_sementic()` in `embeddings.py`.
