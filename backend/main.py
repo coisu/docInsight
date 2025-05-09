@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, Form
-from typing import List
+# from typing import List // python 3.8-
 import shutil
 import os
 

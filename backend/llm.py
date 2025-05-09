@@ -42,7 +42,7 @@ def build_prompt_by_doc_type(query: str, contexts: list, doc_type: str, max_char
     if doc_type == "academic":
         return f"""
 You are an expert academic assistant.
-Answer the following question based on the Academic content below. If appkicable, refer to research goals, methods, results, and conclusions.
+Answer the following question only based on the Academic content below. If appkicable, refer to research goals, methods, results, and conclusions.
 If the answer is not explicitly stated, try to infer it from context. If no information can be inferred, say so clearly.
 
 
@@ -59,7 +59,7 @@ Answer:
     elif doc_type == "report":
         return f"""
 You are an expert report assistant.
-Answer the following question based on the document content.  Try to consider the document's purpose, key findings, and strategic recommendations.
+Answer the following question only based on the document content.  Try to consider the document's purpose, key findings, and strategic recommendations.
 
 Question:
 {query}
@@ -73,7 +73,7 @@ Answer:
     elif doc_type == "manual":
         return f"""
 You are an expert technical manual assistant.
-Provide a clear, step-by-step answer or explanation based on the manual content.
+Provide a clear, step-by-step answer or explanation only based on the manual content.
 
 Question:
 {query}
@@ -87,7 +87,7 @@ Answer:
     elif doc_type == "legal":
         return f"""
 You are an expert legal assistant.
-Answer the following question based on the document content. identify and explain relevant clauses, responsibilities, obligations, or rights.
+Answer the following question only based on the document content. identify and explain relevant clauses, responsibilities, obligations, or rights.
 
 Question:
 {query}
@@ -101,7 +101,7 @@ Answer:
     else:
         return f"""
 You are an expert document assistant.
-Answer the following question based on the document content.
+Answer the following question only based on the document content.
 
 Question:
 {query}
@@ -204,7 +204,7 @@ def build_prompt(query: str, contexts: list, max_chars: int = 6000) -> str:
 
     prompt = f"""
 You are an expert assistant helping to analyze documents.
-Answer the following question based on the document content.
+Answer the following question only based on the document content.
 
 Question:
 {query}
