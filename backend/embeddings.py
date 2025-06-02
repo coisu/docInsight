@@ -8,14 +8,12 @@ from pdf_processing import process_uploaded_pdfs
 from models import model
 from llm import guess_document_type, split_text, split_text_by_sections
 
-MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
+# MODEL_NAME = "sentence-transformers/all-mpnet-base-v2"
 # MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 INDEX_DIR = "data/embeddings"
+os.makedirs(INDEX_DIR, exist_ok=True)
 # INDEX_PATH = "data/embeddings/index.faiss"
 # METADATA_PATH = "data/embeddings/metadata.pkl"
-
-# Load model
-model = SentenceTransformer(MODEL_NAME)
 
 # FAISS is Approximate Nearest Neighbor (ANN) search library. 벡터 중 쿼리와 유사한 벡터값 찾기.근사값기준으로 top_k 청크 추출.
 # It is vector search library, it is fast. but not the most accurate.
@@ -36,120 +34,137 @@ model = SentenceTransformer(MODEL_NAME)
 
 
 def create_index():
-    return faiss.IndexFlatL2(768)
+    # return faiss.IndexFlatL2(768) # 768 is the dimension of the embeddings from the model
+    return faiss.IndexFlatIP(model.get_sentence_embedding_dimension())  # Using inner product for cosine similarity search
 
 def save_individual_index(pdf_filename, index, metadata):
-    index_path = os.path.join(INDEX_DIR, f"{pdf_filename}.faiss")
-    meta_path = os.path.join(INDEX_DIR, f"{pdf_filename}.pkl")
+    base_filename = pdf_filename.replace('.pdf', '')
+    index_path = os.path.join(INDEX_DIR, f"{base_filename}.faiss")
+    meta_path = os.path.join(INDEX_DIR, f"{base_filename}.pkl")
+    
+    os.makedirs(os.path.dirname(index_path), exist_ok=True)
     faiss.write_index(index, index_path)
     with open(meta_path, "wb") as f:
         pickle.dump(metadata, f)
 
-# def save_index(index, metadata):
-#     os.makedirs(os.path.dirname(INDEX_PATH), exist_ok=True)
-#     faiss.write_index(index, INDEX_PATH)
-#     with open(METADATA_PATH, "wb") as f:
-#         pickle.dump(metadata, f)
-
 def load_individual_index(pdf_filename):
-    index_path = os.path.join(INDEX_DIR, f"{pdf_filename}.faiss")
-    meta_path = os.path.join(INDEX_DIR, f"{pdf_filename}.pkl")
-    if not os.path.exists(index_path):
+    base_filename = pdf_filename.replace('.pdf', '')
+    index_path = os.path.join(INDEX_DIR, f"{base_filename}.faiss")
+    meta_path = os.path.join(INDEX_DIR, f"{base_filename}.pkl")
+    if not os.path.exists(index_path) or not os.path.exists(meta_path):
+        print(f"Index or metadata for {pdf_filename} not found. Creating new index.")
         return create_index(), []
-    index = faiss.read_index(index_path)
-    with open(meta_path, "rb") as f:
-        metadata = pickle.load(f)
+    try:
+        index = faiss.read_index(index_path)
+        with open(meta_path, "rb") as f:
+            metadata = pickle.load(f)
+
+    except Exception as e:
+        print(f"Error loading index or metadata for {pdf_filename}: {e}. Returing new index.")
+        return create_index(), []
+    
     return index, metadata
 
-# def load_index():
-#     if not os.path.exists(INDEX_PATH):
-#         return create_index(), []
-#     index = faiss.read_index(INDEX_PATH)
-#     with open(METADATA_PATH, "rb") as f:
-#         metadata = pickle.load(f)
-#     return index, metadata
 
 def embed_and_store_individual(text_data):
+    if not isinstance(text_data, list) or not text_data:
+        print(f"Error: Invalid data format, got {type(text_data)}")
+        return
+
     for item in text_data:
-        index, metadata = create_index(), []
+        if not isinstance(item, dict) or "text" not in item or "filename" not in item:
+            print(f"Warning: Skipping invalid item in embed_and_store_individual: {item}")
+            continue
+
+        pdf_filename = item["filename"]
         text = item["text"]
+
+        index, metadata = create_index(), []
+
         if not text.strip():
+            print(f"Warning: Empty text for {pdf_filename}. Skipping.")
+            save_individual_index(pdf_filename, index, metadata)
             continue
         
         doc_type = guess_document_type(text)
-        has_sections = bool(re.search(r'\b\d+(\.\d+)*\s+[^\n]+', text))
-
-        if doc_type == "academic" and has_sections:
+        # has_sections = bool(re.search(r'\b\d+(\.\d+)*\s+[^\n]+', text))
+        # if doc_type == "academic" and has_sections:
+        if doc_type == "academic" and bool(re.search(r'\b\d+(\.\d+)*\s+[A-Z]', text)): 
             chunks = split_text_by_sections(text)
-
         else:
             chunks = split_text(text)
         # chunks = split_text_by_sections(text) if doc_type == "academic" else split_text(text)
+        if not chunks:
+            print(f"No valid chunks found for {item['filename']} after splitting. Skipping.")
+            save_individual_index(pdf_filename, index, metadata)
+            continue    
 
         embeddings = model.encode(chunks)
-        index.add(np.array(embeddings))
-        metadata.extend([{"filename": item["filename"], "chunk": chunk, "doc_type": doc_type} for chunk in chunks])
 
-        save_individual_index(item["filename"], index, metadata)
+        if embeddings.ndim == 1: # only one chunk, expand dimensions to 2D
+            embeddings = np.expand_dims(embeddings, axis=0)
+        if embeddings.size > 0:
+            faiss.normalize_L2(embeddings)
+            index.add(np.array(embeddings))
+            current_file_metadata = [{"filename": pdf_filename, "chunk": chunk, "doc_type": doc_type} for chunk in chunks]
+            metadata.extend(current_file_metadata)
 
-# def embed_and_store(text_data):
-#     index, metadata = load_index()
-#     for item in text_data:
-#         text = item["text"]
-#         if not text.strip():
-#             continue
+        else:
+            print(f"No embeddings generated for {pdf_filename}. Skipping.")
         
-#         doc_type = guess_document_type(text)
-#         print(f"\n\n>> Document type: {doc_type}\n\n")
-#         if doc_type == "academic":
-#             chunks = split_text_by_sections(text)
-#         else:
-#             chunks = split_text(text)
+        save_individual_index(item["filename"], index, metadata)
+        print(f"Stored embeddings for {pdf_filename} with {len(metadata)} chunks.")
 
-#         embeddings = model.encode(chunks)
-#         index.add(np.array(embeddings))
-#         metadata.extend([{"filename": item["filename"], "chunk": chunk, "doc_type": doc_type} for chunk in chunks])
-#     save_index(index, metadata)
-
-
-def search_unified(query, filenames, top_k=50):
+def search_unified(query:str, filenames:list, top_k:int=50) -> list:
+    if not query.strip() or not filenames:
+        print("Error: Empty query or filenames list.")
+        return []
+    
     query_vec = model.encode([query])
-    combined_chunks = []
+
+    faiss.normalize_L2(query_vec)  # Normalize the query vector for cosine similarity
+
+    combined_chunks_with_scores = []
 
     for filename in filenames:
         index, metadata = load_individual_index(filename)
-        if len(metadata) == 0:
+        
+        if index.ntotal == 0 or not metadata:
+            print(f"No embeddings found for {filename}. Skipping.")
             continue
-        D, I = index.search(np.array(query_vec), top_k)
-        results = [metadata[i] for i in I[0] if i < len(metadata)]
-        combined_chunks.extend(results)
 
-    return combined_chunks[:top_k]
-
-# def search(query, top_k=10):
-#     index, metadata = load_index()
-#     query_vec = model.encode([query])
-#     D, I = index.search(np.array(query_vec), top_k)
-#     return [metadata[i] for i in I[0] if i < len(metadata)]
-
-# def search_with_keywords(query, metadata, top_k=10):
-#     query_vec = model.encode([query])
-#     index = create_index()
-#     chunks = []
-#     for item in metadata:
-#         embedding = model.encode([item["chunk"]])
-#         index.add(np.array(embedding))
-#         chunks.append(item)
+        distances, indices = index.search(query_vec, min(top_k, index.ntotal))
+        
+        for i in range(len(indices[0])):
+            idx = indices[0][i]
+            score = distances[0][i]
+            if idx < len(metadata):
+                combined_chunks_with_scores.append({"score": score, "data": metadata[idx]})
+            else:
+                print(f"Warning: Index {idx} out of bounds for metadata length {len(metadata)} in {filename}.")
     
-#     D, I = index.search(np.array(query_vec), top_k)
-#     return [chunks[i] for i in I[0] if i < len(chunks)]
+    combined_chunks_with_scores.sort(key=lambda x: x["score"], reverse=True)
 
+    final_top_k_chunks = [item["data"] for item in combined_chunks_with_scores[:top_k]]
+
+    return final_top_k_chunks
 
 def store_embedding_for_pdf(pdf_path: str):
-    text_data = process_uploaded_pdfs(os.path.dirname(pdf_path))
-    embed_and_store_individual(text_data)
-    # embed_and_store(text_data)
 
+    pdf_dir = os.path.dirname(pdf_path)
 
+    filename = os.path.basename(pdf_path)
+    text = ""
+    try:
+        from pdf_processing import extract_text_from_pdf
+        text = extract_text_from_pdf(pdf_path)
+    except Exception as e:
+        print(f"Error extracting text from {pdf_path}: {e}")
+        return
+    if text:
+        text_data = [{"filename": filename, "text": text}]
+        embed_and_store_individual(text_data)
+    else:
+        print(f"No text extracted from {pdf_path}. Skipping embedding.")
 
 

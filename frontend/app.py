@@ -31,9 +31,9 @@ if uploaded_files:
         files = [("files", (f.name, f, "application/pdf")) for f in uploaded_files]
         response = requests.post(f"{backend_url}/upload/", files=files)
         if response.status_code == 200:
-            new_files = response.json()["uploaded_files"]
+            new_files = [f["filename"] for f in response.json()["uploaded_files_info"]]
             st.session_state["files"].extend(f for f in new_files if f not in st.session_state["files"])
-            st.success(f"Uploaded and indexed: {', '.join(response.json()['uploaded_files'])}")
+            st.success(f"Uploaded and indexed: {', '.join(new_files)}")
         else:
             st.error(f"Upload failed: {response.text}")
 

@@ -1,5 +1,5 @@
 import os
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 from typing import List, Dict
 from sentence_transformers import util
@@ -8,20 +8,8 @@ import re
 from models import model
 
 load_dotenv()
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-# def is_summary_query(query: str) -> bool:
-#     query = query.lower().strip()
-#     return any(q in query for q in [
-#         "summarize", "summarize this report", "summarize the whole document", "briefly describe", "give me a summary", "analyze the paper",
-#         "what is this paper about", "short summary", "shorten the text", "analyze this"
-#     ])
-
-# def is_comparison_query(query: str) -> bool:
-#     query = query.lower().strip()
-#     return any(q in query for q in [
-#         "compare", "contrast", "difference", "differences", "similarities", "similar to", "different from", "compare and contrast", "compare with", "difference between"
-#     ])
+# client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 def build_prompt_by_doc_type(query: str, contexts: list, doc_type: str, max_chars: int = 6000) -> str:
     context_text = ""
@@ -218,7 +206,7 @@ Answer:
     print(f"\n\nPrompt: {prompt}\n\n")
     return prompt.strip()
 
-def generate_answer_for_summary(prompt: str) -> str:
+async def generate_answer_for_summary(prompt: str) -> str:
     try:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -229,13 +217,13 @@ def generate_answer_for_summary(prompt: str) -> str:
             max_tokens=1024,
             temperature=0.7,
         )
-        return response.choices[0].message.content.strip()
+        return await response.choices[0].message.content.strip()
     except Exception as e:
         print(f"LLM summary generation error: {e}")
         return "An error occurred while generating the summary."
 
 
-def generate_answer_for_comparison(prompt: str) -> str:
+async def generate_answer_for_comparison(prompt: str) -> str:
     try:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -246,7 +234,7 @@ def generate_answer_for_comparison(prompt: str) -> str:
             max_tokens=1024,
             temperature=0.7
         )
-        return response.choices[0].message.content.strip()
+        return await response.choices[0].message.content.strip()
     except Exception as e:
         print(f"LLM generation error: {e}")
         return "An error occurred while generating the answer."
@@ -268,9 +256,9 @@ def generate_answer_for_comparison(prompt: str) -> str:
 #         print(f"LLM generation error: {e}")
 #         return "An error occurred while generating the answer."
 
-def generate_answer(prompt: str) -> str:
+async def generate_answer(prompt: str) -> str:
     try:
-        response = client.chat.completions.create(
+        response = await client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
@@ -285,47 +273,78 @@ def generate_answer(prompt: str) -> str:
         return "An error occurred while generating the answer."
     
 
-    
+
 EXAMPLES = {
     "summary": [
-        "summarize",
+        "summarize this",
+        "summarize this document",
         "summarize this report",
-        "summarize the whole document",
-        "briefly describe the paper",
-        "give me a summary",
-        "what is this paper about",
-        "what are these documents about",
-        "give an overview of the documents",
-        "provide a short summary",
-        "shorten the entire text",
-        "high-level overview",
+        "summarize the whole content",
+        "briefly describe the provided text",
+        "give me a summary of the input",
+        "what is this text about?",
+        "what are these documents generally about?",
+        "give an overview of the provided materials",
+        "provide a short summary of all texts",
+        "shorten the entire text provided",
+        "high-level overview of the content",
+        "tell me about these documents",
+        "what's the main takeaway from this information?",
+        "can you give me the gist of these papers?",
+        "explain what these documents are generally discussing",
+        "what is the overall purpose of this text?",
+        "what are the main ideas discussed across these documents?",
+        "provide a concise explanation of this material",
+        "abstract this document for me"
     ],
     "comparison": [
-        "compare",
-        "compare the documents",
-        "contrast the models",
-        "what are the differences",
-        "what are the similarities",
-        "compare and contrast the methods",
-        "difference between the papers",
-        "how are these different",
-        "how are they similar",
-        "compare with each other",
-        "contrast this with that",
-        "different from",
-        "similar to",
-        "distinguish between these",
-        "highlight differences",
+        "compare these",
+        "compare the provided documents",
+        "contrast the given models",
+        "what are the differences between the first and second text?",
+        "what are the similarities between these two approaches?",
+        "compare and contrast the methods described",
+        "what is the difference between the two papers provided?",
+        "how are these inputs different from each other?",
+        "how are the concepts presented similar?",
+        "compare this with that", 
+        "contrast the first item with the second",
+        "show differences from the other inputs",
+        "find similarities to the other documents",
+        "distinguish between these approaches",
+        "highlight the key differences found",
+        "compare concept A with concept B regarding their features",
+        "what are the key distinctions between method X and method Y as presented?",
+        "analyze the similarities and differences in the conclusions of study 1 and study 2", 
+        "how does model Alpha differ from model Beta in terms of performance?",
+        "evaluate the pros and cons of approach X versus approach Y based on these texts",
+        "what is the relationship between idea A from the first document and idea B from the second?",
+        "show the divergences between these two theories presented",
+        "what are the relative merits of technique P compared to technique Q mentioned?",
+        "how does item X measure up against item Y in terms of specified criteria?",
+        "juxtapose the arguments presented in these articles"
     ],
-    "normal": [
-    "what is the purpose of this document",            # could be taken as summary
-    "what are the key findings",                      
-    "what future work do the authors suggest",
-    "what recommendations are made",
-    "what conclusions are drawn",
-    "what are the main ideas discussed",
-    "what are the limitations mentioned",
-]
+    "normal": [ 
+        "what specific dataset was used for the research mentioned?",
+        "how many participants were involved in the described study?",
+        "according to the text, what is the definition of [general term]?",
+        "what are the key findings reported in section 3 of this document?",
+        "what future research directions are suggested by the authors?",
+        "what were the main conclusions of the experiment detailed in this report?",
+        "explain the methodology used for data analysis in this study.",
+        "what limitations of the current approach are discussed in this paper?",
+        "what is the significance of [specific finding] mentioned in the text?",
+        "describe the [specific process/algorithm] as outlined in this document.",
+        "what was the [specific metric, e.g., F1 score] achieved by the model?",
+        "how is [general concept] defined in the provided text?",
+        "who are the authors of this work?",
+        "what is the publication year of this document?",
+        "what are the key findings?",
+        "what future work do the authors suggest?",
+        "what recommendations are made?",
+        "what conclusions are drawn from this section?", # "this section"으로 범위 한정
+        "what are the limitations mentioned by the authors?"
+    ]
 }
 
 def rerank_by_semantic_similarity(query: str, chunks: list, top_k: int = 8) -> list:
